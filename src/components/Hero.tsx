@@ -1,8 +1,15 @@
 
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
+  const navigate = useNavigate();
+
+  const handleStartBuilding = () => {
+    navigate("/auth");
+  };
+
   return (
     <section id="home" className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-hidden">
       {/* Background decoration */}
@@ -36,7 +43,7 @@ const Hero = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button size="lg" className="px-8 py-4 text-lg font-semibold">
+            <Button size="lg" className="px-8 py-4 text-lg font-semibold" onClick={handleStartBuilding}>
               Start Building Free
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>

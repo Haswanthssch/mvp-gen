@@ -2,12 +2,17 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, X } from "lucide-react";
+import { Menu, LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { User as SupabaseUser } from "@supabase/supabase-js";
+import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,6 +22,28 @@ const Navbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    // Check current auth state
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+    };
+
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
 
   const navLinks = [
     { href: "#home", label: "Home" },
@@ -73,12 +100,30 @@ const Navbar = () => {
           {/* Action Buttons - Desktop */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-center space-x-4">
-              <Button variant="ghost" size="sm" asChild>
-                <a href="/login">Login</a>
-              </Button>
-              <Button size="sm" asChild>
-                <a href="/dashboard">Dashboard</a>
-              </Button>
+              {user ? (
+                <>
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <User className="h-4 w-4" />
+                    <span>{user.email}</span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/build")}>
+                    Dashboard
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4 mr-1" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
+                    Login
+                  </Button>
+                  <Button size="sm" onClick={() => navigate("/build")}>
+                    Dashboard
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -111,12 +156,28 @@ const Navbar = () => {
                   </div>
                   
                   <div className="flex flex-col space-y-3 pt-6 border-t">
-                    <Button variant="ghost" asChild>
-                      <a href="/login">Login</a>
-                    </Button>
-                    <Button asChild>
-                      <a href="/dashboard">Dashboard</a>
-                    </Button>
+                    {user ? (
+                      <>
+                        <div className="text-sm text-gray-600 py-2">
+                          {user.email}
+                        </div>
+                        <Button variant="ghost" onClick={() => navigate("/build")}>
+                          Dashboard
+                        </Button>
+                        <Button variant="ghost" onClick={handleSignOut}>
+                          Sign Out
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="ghost" onClick={() => navigate("/auth")}>
+                          Login
+                        </Button>
+                        <Button onClick={() => navigate("/build")}>
+                          Dashboard
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </SheetContent>
