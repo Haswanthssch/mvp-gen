@@ -2,17 +2,24 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, LogOut, User } from "lucide-react";
+import { Menu, LogOut, User, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+
+interface UserProfile {
+  name: string | null;
+  email: string | null;
+}
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,18 +34,46 @@ const Navbar = () => {
     // Check current auth state
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+        fetchUserProfile(session.user.id);
+      }
     };
 
     checkAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+        fetchUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setUserProfile(null);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('name, email')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return;
+      }
+
+      setUserProfile(data);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -53,12 +88,29 @@ const Navbar = () => {
   ];
 
   const scrollToSection = (href: string) => {
+    // If not on home page, navigate to home first
+    if (location.pathname !== '/') {
+      navigate('/' + href);
+      return;
+    }
+
     const element = document.querySelector(href);
     if (element) {
       element.scrollIntoView({ behavior: "smooth" });
     }
     setIsMobileMenuOpen(false);
   };
+
+  const handleBuildClick = () => {
+    if (user) {
+      navigate("/build");
+    } else {
+      navigate("/auth");
+    }
+    setIsMobileMenuOpen(false);
+  };
+
+  const displayName = userProfile?.name || user?.email || "User";
 
   return (
     <nav
@@ -104,10 +156,11 @@ const Navbar = () => {
                 <>
                   <div className="flex items-center space-x-2 text-sm text-gray-600">
                     <User className="h-4 w-4" />
-                    <span>{user.email}</span>
+                    <span>{displayName}</span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/build")}>
-                    Dashboard
+                  <Button variant="ghost" size="sm" onClick={handleBuildClick}>
+                    <Rocket className="h-4 w-4 mr-1" />
+                    Build
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleSignOut}>
                     <LogOut className="h-4 w-4 mr-1" />
@@ -119,8 +172,9 @@ const Navbar = () => {
                   <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
                     Login
                   </Button>
-                  <Button size="sm" onClick={() => navigate("/build")}>
-                    Dashboard
+                  <Button size="sm" onClick={handleBuildClick}>
+                    <Rocket className="h-4 w-4 mr-1" />
+                    Start Building
                   </Button>
                 </>
               )}
@@ -159,10 +213,11 @@ const Navbar = () => {
                     {user ? (
                       <>
                         <div className="text-sm text-gray-600 py-2">
-                          {user.email}
+                          {displayName}
                         </div>
-                        <Button variant="ghost" onClick={() => navigate("/build")}>
-                          Dashboard
+                        <Button variant="ghost" onClick={handleBuildClick}>
+                          <Rocket className="h-4 w-4 mr-2" />
+                          Build
                         </Button>
                         <Button variant="ghost" onClick={handleSignOut}>
                           Sign Out
@@ -173,8 +228,9 @@ const Navbar = () => {
                         <Button variant="ghost" onClick={() => navigate("/auth")}>
                           Login
                         </Button>
-                        <Button onClick={() => navigate("/build")}>
-                          Dashboard
+                        <Button onClick={handleBuildClick}>
+                          <Rocket className="h-4 w-4 mr-2" />
+                          Start Building
                         </Button>
                       </>
                     )}
