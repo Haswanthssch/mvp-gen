@@ -1,55 +1,55 @@
-import { useEffect, useState } from "react";
+
+import { useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertTriangle, FileText, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import ProjectLoadingState from "@/components/ProjectLoadingState";
+import ProjectErrorState from "@/components/ProjectErrorState";
+import ProjectNotFoundState from "@/components/ProjectNotFoundState";
+import ProjectContent from "@/components/ProjectContent";
+import { useProgressTimer } from "@/hooks/useProgressTimer";
 
 const ProjectDetails = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [progress, setProgress] = useState(10);
 
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     if (!projectId) return null;
+    
     const { data, error } = await supabase
       .from("projects")
       .select("*")
       .eq("id", projectId)
       .single();
+    
     if (error) throw new Error(error.message);
     return data;
-  };
+  }, [projectId]);
 
-  const { data: project, isLoading, error, refetch } = useQuery({
+  const { 
+    data: project, 
+    isLoading, 
+    error 
+  } = useQuery({
     queryKey: ['project', projectId],
     queryFn: fetchProject,
     enabled: !!projectId,
     refetchOnWindowFocus: false,
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
   });
 
-  useEffect(() => {
-    if (project?.status === 'processing') {
-      setProgress(10);
-      const timer = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 95) {
-            clearInterval(timer);
-            return 95;
-          }
-          return prev + 2;
-        });
-      }, 1000);
-      return () => {
-        clearInterval(timer);
-      };
-    }
-  }, [project?.status]);
+  const { progress } = useProgressTimer({
+    isActive: project?.status === 'processing',
+    initialProgress: 10,
+    increment: 2,
+    interval: 1000,
+    maxProgress: 95
+  });
 
+  // Set up real-time subscription for project updates
   useEffect(() => {
     if (!projectId) return;
 
@@ -71,80 +71,28 @@ const ProjectDetails = () => {
     };
   }, [projectId, queryClient]);
 
+  // Handle navigation for invalid project ID
+  useEffect(() => {
+    if (!projectId) {
+      navigate('/build/new');
+    }
+  }, [projectId, navigate]);
+
   const renderContent = () => {
     if (isLoading) {
-      return (
-        <div className="flex flex-col items-center justify-center text-center p-8">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-lg text-muted-foreground">Loading your project...</p>
-        </div>
-      );
+      return <ProjectLoadingState />;
     }
     
     if (error) {
-      return (
-        <div className="flex flex-col items-center justify-center text-center p-8 bg-destructive/10 rounded-lg">
-          <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <p className="text-lg text-destructive mb-4">Error loading project: {error.message}</p>
-          <Button onClick={() => navigate('/build/new')}>Create a New Project</Button>
-        </div>
-      );
+      return <ProjectErrorState error={error} />;
     }
 
     if (!project) {
-        return (
-          <div className="flex flex-col items-center justify-center text-center p-8">
-            <p className="text-lg text-muted-foreground mb-4">Project not found.</p>
-            <Button onClick={() => navigate('/build/new')}>Create a New Project</Button>
-          </div>
-        );
+      return <ProjectNotFoundState />;
     }
 
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <FileText className="text-primary" />
-              Original Idea
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">{project.original_idea}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Sparkles className="text-primary" />
-              AI Enhanced Prompt
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {project.status === 'processing' && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Your idea is being enhanced by AI... This can take up to a minute.</span>
-                </div>
-                <Progress value={progress} className="w-full" />
-              </div>
-            )}
-            {project.status === 'completed' && (
-              <p className="text-muted-foreground whitespace-pre-wrap">{project.enhanced_prompt}</p>
-            )}
-             {project.status === 'failed' && (
-              <div className="flex items-center gap-3 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                <span>Something went wrong. Please try again.</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+    return <ProjectContent project={project} progress={progress} />;
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
