@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,11 +7,13 @@ import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, AlertTriangle, FileText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 
 const ProjectDetails = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [progress, setProgress] = useState(10);
 
   const fetchProject = async () => {
     if (!projectId) return null;
@@ -30,6 +32,24 @@ const ProjectDetails = () => {
     enabled: !!projectId,
     refetchOnWindowFocus: false,
   });
+
+  useEffect(() => {
+    if (project?.status === 'processing') {
+      setProgress(10);
+      const timer = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 95) {
+            clearInterval(timer);
+            return 95;
+          }
+          return prev + 5;
+        });
+      }, 1000);
+      return () => {
+        clearInterval(timer);
+      };
+    }
+  }, [project?.status]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -104,9 +124,12 @@ const ProjectDetails = () => {
           </CardHeader>
           <CardContent>
             {project.status === 'processing' && (
-              <div className="flex items-center gap-3 text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Your idea is being enhanced by AI...</span>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Your idea is being enhanced by AI... This can take up to a minute.</span>
+                </div>
+                <Progress value={progress} className="w-full" />
               </div>
             )}
             {project.status === 'completed' && (
