@@ -28,6 +28,9 @@ async function enhanceAndSave(projectId: string, idea: string) {
   try {
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
     
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55-second timeout
+
     const response = await fetch(geminiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -35,8 +38,10 @@ async function enhanceAndSave(projectId: string, idea: string) {
         contents: [{
           parts: [{ text: `${SYSTEM_PROMPT}\n\nUser Idea: "${idea}"` }]
         }]
-      })
+      }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -44,6 +49,11 @@ async function enhanceAndSave(projectId: string, idea: string) {
     }
 
     const data = await response.json();
+
+    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
+      throw new Error('Invalid response structure from AI.');
+    }
+    
     const enhanced_prompt = data.candidates[0].content.parts[0].text;
     
     const { error: updateError } = await supabase

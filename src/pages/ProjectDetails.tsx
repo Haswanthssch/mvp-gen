@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -42,7 +41,7 @@ const ProjectDetails = () => {
             clearInterval(timer);
             return 95;
           }
-          return prev + 5;
+          return prev + 2;
         });
       }, 1000);
       return () => {
