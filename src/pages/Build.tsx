@@ -86,7 +86,7 @@ const Build = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full">Create New Project</Button>
+              <Button variant="outline" className="w-full" onClick={() => navigate('/build/new')}>+ New Project</Button>
             </CardContent>
           </Card>
 
