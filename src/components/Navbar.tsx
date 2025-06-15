@@ -2,25 +2,17 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, LogOut, User, Hammer } from "lucide-react";
+import { Menu, LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
-import { useNavigate, useLocation } from "react-router-dom";
-
-interface UserProfile {
-  id: string;
-  name: string | null;
-  email: string | null;
-}
+import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -35,59 +27,22 @@ const Navbar = () => {
     // Check current auth state
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
-        await fetchUserProfile(session.user.id);
-      }
+      setUser(session?.user ?? null);
     };
 
     checkAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchUserProfile(session.user.id);
-      } else {
-        setUserProfile(null);
-      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return;
-      }
-
-      setUserProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    }
-  };
-
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    setUserProfile(null);
     navigate("/");
-  };
-
-  const handleBuildClick = () => {
-    if (user) {
-      navigate("/build");
-    } else {
-      navigate("/auth");
-    }
-    setIsMobileMenuOpen(false);
   };
 
   const navLinks = [
@@ -98,20 +53,9 @@ const Navbar = () => {
   ];
 
   const scrollToSection = (href: string) => {
-    if (location.pathname !== "/") {
-      navigate("/");
-      // Wait for navigation to complete, then scroll
-      setTimeout(() => {
-        const element = document.querySelector(href);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth" });
-        }
-      }, 100);
-    } else {
-      const element = document.querySelector(href);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
+    const element = document.querySelector(href);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
     }
     setIsMobileMenuOpen(false);
   };
@@ -160,11 +104,10 @@ const Navbar = () => {
                 <>
                   <div className="flex items-center space-x-2 text-sm text-gray-600">
                     <User className="h-4 w-4" />
-                    <span>{userProfile?.name || user.email}</span>
+                    <span>{user.email}</span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={handleBuildClick}>
-                    <Hammer className="h-4 w-4 mr-1" />
-                    Build
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/build")}>
+                    Dashboard
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleSignOut}>
                     <LogOut className="h-4 w-4 mr-1" />
@@ -176,9 +119,8 @@ const Navbar = () => {
                   <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
                     Login
                   </Button>
-                  <Button size="sm" onClick={handleBuildClick}>
-                    <Hammer className="h-4 w-4 mr-1" />
-                    Build
+                  <Button size="sm" onClick={() => navigate("/build")}>
+                    Dashboard
                   </Button>
                 </>
               )}
@@ -217,11 +159,10 @@ const Navbar = () => {
                     {user ? (
                       <>
                         <div className="text-sm text-gray-600 py-2">
-                          {userProfile?.name || user.email}
+                          {user.email}
                         </div>
-                        <Button variant="ghost" onClick={handleBuildClick}>
-                          <Hammer className="h-4 w-4 mr-1" />
-                          Build
+                        <Button variant="ghost" onClick={() => navigate("/build")}>
+                          Dashboard
                         </Button>
                         <Button variant="ghost" onClick={handleSignOut}>
                           Sign Out
@@ -232,9 +173,8 @@ const Navbar = () => {
                         <Button variant="ghost" onClick={() => navigate("/auth")}>
                           Login
                         </Button>
-                        <Button onClick={handleBuildClick}>
-                          <Hammer className="h-4 w-4 mr-1" />
-                          Build
+                        <Button onClick={() => navigate("/build")}>
+                          Dashboard
                         </Button>
                       </>
                     )}
