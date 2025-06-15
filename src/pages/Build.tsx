@@ -76,7 +76,7 @@ const Build = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/build/new')}>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
@@ -89,7 +89,7 @@ const Build = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" onClick={() => navigate('/build/new')}>Create New Project</Button>
+              <Button className="w-full">Create New Project</Button>
             </CardContent>
           </Card>
 
