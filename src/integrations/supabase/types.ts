@@ -33,6 +33,38 @@ export type Database = {
         }
         Relationships: []
       }
+      project_chats: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          project_id: string
+          sender: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          project_id: string
+          sender: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          project_id?: string
+          sender?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_chats_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string

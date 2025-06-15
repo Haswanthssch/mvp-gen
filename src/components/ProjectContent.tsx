@@ -1,7 +1,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Sparkles, AlertTriangle } from "lucide-react";
+import { FileText, Sparkles, AlertTriangle, MessageCircle } from "lucide-react";
 import ProjectProgress from "./ProjectProgress";
+import ProjectChat from "./ProjectChat";
 
 interface Project {
   id: string;
@@ -65,6 +66,18 @@ const ProjectContent = ({ project, progress }: ProjectContentProps) => {
         </CardHeader>
         <CardContent>
           {renderEnhancedPromptContent()}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <MessageCircle className="text-primary" />
+            Project Discussion
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ProjectChat projectId={project.id} />
         </CardContent>
       </Card>
     </div>
